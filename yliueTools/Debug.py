@@ -41,11 +41,21 @@ class Debug(object):
             return
         _time = datetime.now().strftime('%Y-%m-%d %H:%M:%S,%f')[:-3]
         _str = f'[{_time}] {_type} {self.project}.{_name}: {_msg}'
+        if _type == 'TIPS':
+            if not self.tips:
+                return
         if self.color:
             _str = f'{Color.purple(f"[{_time}]")} {Debug.getTypeStr(_type)} {Color.grey(f"{self.project}.{_name}:")} {_msg}'
         if self.filterType == 'all' and self.filterName == 'all':
             print(_str)
             return
+        if self.filterType == 'all' or self.filterName == 'all':
+            if self.filterType == _type:
+                print(_str)
+                return
+            if self.filterName == _name:
+                print(_str)
+                return
         if self.filterType != _type or self.filterName != _name:
             return
         print(_str)

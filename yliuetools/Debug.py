@@ -36,6 +36,8 @@ class Debug(object):
         self.__tempPath = '.log\\log.txt'
         # 函数传递层数
         self.__layer = 0
+        # 项目的本地路径
+        self.__localPath = None
 
         # 尝试激活cmd中的ANSI功能
         Color.initANSI()
@@ -69,12 +71,13 @@ class Debug(object):
 
     @staticmethod
     def __getTypeStr(_type: str) -> str:
-        #         # ing ok 正常运行 run启动
+        # ing ok 正常运行 run启动
         if _type == 'ING' or _type == 'OK' or _type == 'RUN' or _type == 'INFO':
             _typeStr = Color.green(_type)
         # 错误
         elif _type == 'ERR':
             _typeStr = Color.red(_type)
+        # Debug内部打印
         elif _type == 'PRIVATE':
             _typeStr = Color.blue(_type)
         elif _type == 'TIPS':
@@ -240,16 +243,29 @@ class Debug(object):
         self.__filterFunc = 'all'
         self.__filterType = 'all'
 
-    def DebugPath(self, _localPath: str):
-        if self.__switch:
+    def setLocalPath(self, _localPath: str):
+        self.__localPath = _localPath
+
+    def DebugPath(self, _defaultPath: str):
+        _localPath = self.__localPath
+        try:
             _path = _localPath + '.debug'
+        except TypeError:
+            self.logError('初始化debug文件失败:没有设置本地路径,请用Debug.setLocalPath')
+            return _defaultPath
+        if self.__switch:
             try:
                 os.mkdir(_path)
             except FileExistsError:
                 pass
+            except FileNotFoundError:
+                self.logError(f'初始化debug文件失败:项目本地路径不存在:{_localPath}')
+                return _localPath
             return _path + '\\'
+
         try:
-            shutil.rmtree('.debug')
+            shutil.rmtree(_path)
+            self.__intoLog('删除.debug文件', 'OK')
         except FileNotFoundError:
             pass
         return _localPath
@@ -258,13 +274,16 @@ class Debug(object):
         if not self.__switch:
             return
         self.__layer += 1
-        self.__intoLog('尝试清除.debug文件')
-        try:
-            self.__layer += 1
-            shutil.rmtree('.debug')
-            self.__intoLog('清除成功', 'OK')
-        except FileNotFoundError:
-            self.__intoLog('清除失败:文件不存在', 'ERR')
+        _localPath = self.__localPath
+        if _localPath:
+            _debugPath = _localPath + '.debug'
+            self.__intoLog('尝试清除.debug文件')
+            try:
+                self.__layer += 1
+                shutil.rmtree(_debugPath)
+                self.__intoLog('清除成功', 'OK')
+            except FileNotFoundError:
+                self.__intoLog('清除失败:文件不存在', 'ERR')
 
     # 测试内容
     def __rMain(self, _tips: bool = True):

@@ -22,6 +22,8 @@ class Debug(object):
         self.__filterType = 'all'
         # 是否开启提示
         self.__tips = True
+        # 内部信息打印
+        self.__showIntoLog = False
         # 是否开启颜色
         self.__color = True
         # 是否开启实验内容
@@ -42,6 +44,9 @@ class Debug(object):
             _tPath = __file__[:-8] + 'TrackLog.py'
             os.system(f'start cmd /k "python {_tPath} path {self.__tempPath} color {self.__color}"')
             self.initTempFile()
+
+    def showDebugLog(self):
+        self.__showIntoLog = True
 
     def initTempFile(self):
         _rootPath = '.log'
@@ -64,8 +69,10 @@ class Debug(object):
 
     @staticmethod
     def __getTypeStr(_type: str) -> str:
-        if _type == 'ING' or _type == 'OK' or _type == 'RUN':
+        #         # ing ok 正常运行 run启动
+        if _type == 'ING' or _type == 'OK' or _type == 'RUN' or _type == 'INFO':
             _typeStr = Color.green(_type)
+        # 错误
         elif _type == 'ERR':
             _typeStr = Color.red(_type)
         elif _type == 'PRIVATE':
@@ -80,10 +87,14 @@ class Debug(object):
             _typeStr = _type
         return _typeStr
 
-    def __getLogStr(self, _msg, _func, _type) -> tuple[str, str]:
+    def __getLogStr(self, _msg, _func, _type, _into=False) -> tuple[str, str]:
         self.__layer += 1
         _layer = self.__layer
+
         _time = self.__logTime()
+        _project = self.__project
+        if _into:
+            _project = 'Debug'
 
         # 默认填写函数名
         if self.__fillFunc:
@@ -94,12 +105,14 @@ class Debug(object):
 
         self.__layer = 0
 
-        _strLog = f'{_time}{_type} {self.__project}.{_func}: {_msg}'
+        _strLog = f'{_time}{_type} {_project}.{_func}: {_msg}'
 
+        if _into:
+            _project = Color.yellow(_project)
         _time = Color.purple(_time)
         _type = self.__getTypeStr(_type)
 
-        _colorLog = f'{_time}{_type} {self.__project}{Color.grey(f".{_func}")} {_msg}'
+        _colorLog = f'{_time}{_type} {_project}{Color.grey(f".{_func}")} {_msg}'
         return _strLog, _colorLog
 
     def __logTime(self) -> str:
@@ -108,6 +121,18 @@ class Debug(object):
             _time = f'[{_time}] '
             return _time
         return ''
+
+    def __intoLog(self, _msg='', _type: str = 'INFO', _func: str = 'default') -> None:
+        if not self.__showIntoLog:
+            return
+        _strLog, _colorLog = self.__getLogStr(_msg, _func, _type, True)
+        _str = _strLog
+
+        # 是否输出颜色
+        if self.__color:
+            _str = _colorLog
+
+        self.logPrint(_str)
 
     def __filter(self, _str: str, _func: str, _type: str):
         # 筛选器
@@ -144,15 +169,19 @@ class Debug(object):
                 except PermissionError:
                     time.sleep(0.1)
 
+    def logOk(self, _msg, _func: str = 'default'):
+        self.__layer += 1
+        self.log(_msg, 'OK', _func)
+
     def logError(self, _msg: str, _func: str = 'default'):
         self.__layer += 1
-        self.log(_msg, _func, 'ERR')
+        self.log(_msg, 'ERR', _func)
 
     def logEnd(self, _msg: str, _func: str = 'default'):
         self.__layer += 1
-        self.log(_msg, _func, 'END')
+        self.log(_msg, 'END', _func)
 
-    def log(self, _msg='', _func: str = 'default', _type: str = 'ING'):
+    def log(self, _msg='', _type: str = 'INFO', _func: str = 'default'):
         self.__layer += 1
 
         # debug关闭
@@ -210,6 +239,32 @@ class Debug(object):
         # 重置过滤器
         self.__filterFunc = 'all'
         self.__filterType = 'all'
+
+    def DebugPath(self, _localPath: str):
+        if self.__switch:
+            _path = _localPath + '.debug'
+            try:
+                os.mkdir(_path)
+            except FileExistsError:
+                pass
+            return _path + '\\'
+        try:
+            shutil.rmtree('.debug')
+        except FileNotFoundError:
+            pass
+        return _localPath
+
+    def cleanDebug(self):
+        if not self.__switch:
+            return
+        self.__layer += 1
+        self.__intoLog('尝试清除.debug文件')
+        try:
+            self.__layer += 1
+            shutil.rmtree('.debug')
+            self.__intoLog('清除成功', 'OK')
+        except FileNotFoundError:
+            self.__intoLog('清除失败:文件不存在', 'ERR')
 
     # 测试内容
     def __rMain(self, _tips: bool = True):

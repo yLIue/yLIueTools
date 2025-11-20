@@ -1,0 +1,7 @@
+# python
+.idea/
+.venv/
+dist/
+run.txt
+setup.py
+__pycache__

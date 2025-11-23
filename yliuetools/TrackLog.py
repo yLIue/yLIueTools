@@ -3,7 +3,6 @@ import os
 import time
 import sys
 import shutil
-import winsound
 import win32api
 # pywin32
 
@@ -58,6 +57,7 @@ class TrackLog:
 
         while self.isRunning:
             if not os.path.exists(self.trackPath):
+                self.debug.log()
                 self.debug.logError(f'文件被删除,停止追踪')
                 break
             _sizeIng = self.getFileSize()
@@ -72,11 +72,11 @@ class TrackLog:
     def stop(self, *_stopType):
         # stopType 0 ctrl+c
         # stopType 2 点关闭
-        winsound.Beep(800, 100)
         self.isStop = True
-        self.debug.log(_stopType, _type='STOP_TYPE')
+        # self.debug.log(_stopType, _type='STOP_TYPE')
         if _stopType == (0,):
             # ctrl+c
+            self.debug.log()
             self.debug.logError('用户中断')
             self.isStop = False
             self.isRunning = False
@@ -98,7 +98,7 @@ class TrackLog:
         if not os.path.exists(_path):
             self.debug.logError(f'路径:{_path} 文件不存在,等待文件创建')
             while not os.path.exists(_path):
-                time.sleep(0.5)
+                time.sleep(0.2)
 
         # 初始化
         self.trackSize = self.getFileSize()

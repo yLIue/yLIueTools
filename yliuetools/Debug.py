@@ -44,8 +44,18 @@ class Debug(object):
 
         if self.__cmd:
             _tPath = __file__[:-8] + 'TrackLog.py'
-            os.system(f'start cmd /k "python {_tPath} path {self.__tempPath} color {self.__color}"')
+            if os.path.exists('.log'):
+                while True:
+                    try:
+                        if os.path.exists('.log'):
+                            shutil.rmtree('.log')
+                        break
+                    except PermissionError:
+                        time.sleep(0.1)
+            os.system(f'start cmd /c "python {_tPath} path {self.__tempPath} color {self.__color}"')
             self.initTempFile()
+
+
 
     def showDebugLog(self):
         self.__showIntoLog = True
@@ -58,16 +68,6 @@ class Debug(object):
             with open(self.__tempPath, 'w'):
                 pass
             time.sleep(1)
-
-    def cmdOff(self):
-        if self.__cmd:
-            while True:
-                try:
-                    if os.path.exists('.log'):
-                        shutil.rmtree('.log')
-                    break
-                except PermissionError:
-                    time.sleep(0.1)
 
     @staticmethod
     def __getTypeStr(_type: str) -> str:
@@ -106,8 +106,6 @@ class Debug(object):
                 if _func == '<module>':
                     _func = 'main'
 
-        self.__layer = 0
-
         _strLog = f'{_time}{_type} {_project}.{_func}: {_msg}'
 
         if _into:
@@ -135,32 +133,35 @@ class Debug(object):
         if self.__color:
             _str = _colorLog
 
-        self.logPrint(_str)
+        self.__logPrint(_str)
 
     def __filter(self, _str: str, _func: str, _type: str):
         # 筛选器
         if self.__filterType == 'all' and self.__filterFunc == 'all':
-            self.logPrint(_str)
+            self.__logPrint(_str)
             return
         if self.__filterType == 'all' or self.__filterFunc == 'all':
             if self.__filterType == _type:
-                self.logPrint(_str)
+                self.__logPrint(_str)
                 return
             if self.__filterFunc == _func:
-                self.logPrint(_str)
+                self.__logPrint(_str)
                 return
         if self.__filterType != _type or self.__filterFunc != _func:
             return
-        self.logPrint(_str)
+        self.__logPrint(_str)
         return
 
-    def logPrint(self, _msg: str):
+    def __logPrint(self, _msg: str):
+        self.__layer = 0
+        if not self.__switch:
+            return
         if self.__cmd:
-            self.logSave(_msg)
+            self.__logSave(_msg)
             return
         print(_msg)
 
-    def logSave(self, _msg: str):
+    def __logSave(self, _msg: str):
         if self.__cmd:
             while True:
                 try:
@@ -196,7 +197,7 @@ class Debug(object):
                 return
         # 打印空白行
         if _msg == '':
-            self.logPrint('')
+            self.__logPrint('')
             return
 
         _strLog, _colorLog = self.__getLogStr(_msg, _func, _type)
@@ -249,7 +250,7 @@ class Debug(object):
     def DebugPath(self, _defaultPath: str):
         _localPath = self.__localPath
         try:
-            _path = _localPath + '.debug'
+            _path = _localPath + '\\.debug'
         except TypeError:
             self.logError('初始化debug文件失败:没有设置本地路径,请用Debug.setLocalPath')
             return _defaultPath
@@ -276,14 +277,14 @@ class Debug(object):
         self.__layer += 1
         _localPath = self.__localPath
         if _localPath:
-            _debugPath = _localPath + '.debug'
-            self.__intoLog('尝试清除.debug文件')
+            _debugPath = _localPath + '\\.debug'
+            self.__intoLog('尝试清除.debug文件', _func='cleanDebug')
             try:
                 self.__layer += 1
                 shutil.rmtree(_debugPath)
-                self.__intoLog('清除成功', 'OK')
+                self.__intoLog('清除成功', 'OK', 'cleanDebug')
             except FileNotFoundError:
-                self.__intoLog('清除失败:文件不存在', 'ERR')
+                self.__intoLog('清除失败:文件不存在', 'ERR', 'cleanDebug')
 
     # 测试内容
     def __rMain(self, _tips: bool = True):
